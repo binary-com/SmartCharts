@@ -108,7 +108,7 @@
         "path": "^0.12.7",
         "po-loader": "^0.7.0",
         "po2json": "^1.0.0-alpha",
-        "postcss": "^8.4.23",
+        "postcss": "^8.4.31",
         "postcss-import": "^15.1.0",
         "postcss-inline-svg": "^6.0.0",
         "postcss-loader": "^7.3.0",
