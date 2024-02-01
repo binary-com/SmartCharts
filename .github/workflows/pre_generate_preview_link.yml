@@ -1,0 +1,36 @@
+name: Pre-generate preview link
+
+permissions:
+    pull-requests: write
+
+on:
+    pull_request:
+        types: [opened, synchronize]
+
+env:
+    HEAD_REF: ${{ github.head_ref }}
+
+concurrency:
+    group: cloudflare-pages-verify-"$HEAD_REF"
+    cancel-in-progress: true
+
+jobs:
+    upload_pr_info:
+        runs-on: Ubuntu-latest
+        steps:
+            - name: Retrieve PR information
+              env:
+                  ISSUE_NUMBER: ${{ github.event.number }}
+                  USERNAME: ${{ github.event.pull_request.user.login }}
+                  HEAD_REF: ${{ github.head_ref }}
+              run: |
+                  mkdir -p ./pr
+                  echo "$ISSUE_NUMBER" > ./pr/ISSUE_NUMBER
+                  echo "$USERNAME" > ./pr/USERNAME
+                  echo "$HEAD_REF" > ./pr/BRANCHNAME
+
+            - name: Upload PR information to artifact
+              uses: actions/upload-artifact@v2
+              with:
+                  name: 'pr-${{github.run_id}}'
+                  path: pr/

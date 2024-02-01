@@ -1,0 +1,140 @@
+name: Generate preview link
+
+permissions:
+    actions: write
+    checks: write
+    contents: write
+    deployments: write
+    pull-requests: write
+    statuses: write
+
+on:
+    workflow_run:
+        workflows: ['Pre-generate preview link']
+        types:
+            - completed
+
+env:
+    HEAD_REF: ${{ github.head_ref }}
+
+concurrency:
+    group: cloudflare-pages-build-"$HEAD_REF"
+    cancel-in-progress: true
+
+jobs:
+    build_and_deploy_preview_link:
+        runs-on: Ubuntu-latest
+        steps:
+            - name: Download artifact
+              id: download-artifact
+              uses: dawidd6/action-download-artifact@v2
+              with:
+                  workflow_conclusion: success
+                  run_id: ${{ github.event.workflow_run.id }}
+                  name: 'pr-${{ github.event.workflow_run.id }}'
+                  path: .pr
+
+            - name: Retrieve pull request
+              id: pr_information
+              run: |
+                  echo "username=$(cat .pr/USERNAME)" >> $GITHUB_OUTPUT
+                  echo "issue_number=$(cat .pr/ISSUE_NUMBER)" >> $GITHUB_OUTPUT
+                  echo "branch_name=$(cat .pr/BRANCHNAME)" >> $GITHUB_OUTPUT
+
+            - name: Post preview build comment
+              id: post_preview_build_comment
+              uses: 'deriv-com/shared-actions/.github/actions/post_preview_build_comment@v1'
+              with:
+                  issue_number: ${{steps.pr_information.outputs.issue_number}}
+                  head_sha: ${{github.event.workflow_run.head_sha}}
+
+            - name: Verify user
+              uses: 'deriv-com/shared-actions/.github/actions/verify_user_in_organization@v1'
+              with:
+                  username: ${{steps.pr_information.outputs.username}}
+                  token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+            - name: Checkout SmartCharts
+              uses: './.github/actions/checkout'
+              with:
+                  repository: ${{steps.pr_information.outputs.username}}/SmartCharts
+                  path: SmartCharts
+                  ref: ${{steps.pr_information.outputs.branch_name}}
+                  alternate_ref: master
+
+            - name: Checkout deriv-app
+              uses: './.github/actions/checkout'
+              with:
+                  repository: ${{steps.pr_information.outputs.username}}/deriv-app
+                  path: deriv-app
+                  ref: ${{steps.pr_information.outputs.branch_name}}
+                  alternate_ref: master
+
+            - name: Custom flutter-chart
+              uses: './.github/actions/checkout'
+              with:
+                  repository: ${{steps.pr_information.outputs.username}}/flutter-chart
+                  path: flutter-chart
+                  ref: ${{steps.pr_information.outputs.branch_name}}
+                  alternate_ref: fe-changes
+
+            - name: Setup Node
+              uses: actions/setup-node@v1
+              with:
+                  node-version: 18.x
+
+            - name: Setup deriv-app
+              run: cd deriv-app && npm install && npm run bootstrap
+
+            - name: Remove @deriv-charts in deriv-app
+              run: rm -rf deriv-app/node_modules/@deriv/deriv-charts/dist
+
+            - name: Setup SmartCharts
+              run: cd SmartCharts && npm install
+
+            - uses: subosito/flutter-action@v2
+              with:
+                  flutter-version: '3.10.6'
+                  channel: 'stable'
+                  cache: true
+
+            - name: Build flutter
+              run: |
+                  cd SmartCharts/chart_app
+                  flutter pub get
+                  flutter build web --web-renderer html --release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+            - name: Build SmartCharts
+              run: cd SmartCharts && npm run build -- --output-path ../deriv-app/node_modules/@deriv/deriv-charts/dist
+
+            - name: Run Tests
+              run: cd SmartCharts && npm run test
+
+            - name: Build deriv-app
+              run: cd deriv-app && npm run build:all
+
+            - name: Setup Node
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
+
+            - name: Publish to CF pages branch
+              id: publish_to_pages_branch
+              uses: 'deriv-com/shared-actions/.github/actions/publish_to_pages_branch@v1'
+              with:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TEST_LINKS_API_TOKEN }}
+                  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_TEST_LINKS_ACCOUNT_ID }}
+                  project_name: 'smartcharts-preview'
+                  branch_name: 'pr-${{steps.pr_information.outputs.issue_number}}'
+                  output_dir: deriv-app/packages/core/dist
+
+            - name: 'Generate preview link comment'
+              uses: 'deriv-com/shared-actions/.github/actions/post_preview_link_comment@v1'
+              if: always() && steps.post_preview_build_comment.outcome == 'success'
+              with:
+                  issue_number: ${{steps.pr_information.outputs.issue_number}}
+                  check_run_id: ${{steps.post_preview_build_comment.outputs.check_run_id}}
+                  preview_url: ${{steps.publish_to_pages_branch.outputs.cf_pages_url}}
+                  status: ${{job.status}}

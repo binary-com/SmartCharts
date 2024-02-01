@@ -1,0 +1,68 @@
+name: Checkout
+
+inputs:
+    fetch-depth:
+        default: 1
+        required: false
+        type: number
+    path:
+        default: ''
+        required: false
+        type: string
+    repository:
+        default: ${{ github.repository }}
+        required: false
+        type: string
+    ref:
+        default: ''
+        required: false
+        type: string
+    alternate_ref:
+        default: ''
+        required: false
+        type: string
+    token:
+        default: ${{ github.token }}
+        required: false
+        type: string
+
+outputs:
+    ref_exists:
+        description: 'Specifies whether the ref exists or not'
+        value: ${{ steps.repo.outputs.ref-exists }}
+
+runs:
+    using: composite
+
+    steps:
+        - id: repo
+          shell: bash
+          env:
+              GH_TOKEN: ${{ inputs.token }}
+          run: |
+              if git ls-remote --heads --quiet --exit-code https://${{ inputs.token }}@github.com/${{ inputs.repository }}.git ${{ inputs.ref }}
+              then
+                echo "::notice::Checkout: ${{ inputs.repository }} using ${{ inputs.ref }}"
+                echo "ref-exists=true" >> $GITHUB_OUTPUT
+              else
+                echo "::notice::Checkout: ${{ inputs.repository }} does not have ref ${{ inputs.ref }} (fallback to ${{ inputs.alternate_ref }})"
+                echo "ref-exists=false" >> $GITHUB_OUTPUT
+              fi
+
+        - if: steps.repo.outputs.ref-exists == 'true'
+          uses: actions/checkout@v3
+          with:
+              fetch-depth: ${{ inputs.fetch-depth }}
+              path: ${{ inputs.path }}
+              repository: ${{ inputs.repository }}
+              ref: ${{ inputs.ref }}
+              token: ${{ inputs.token }}
+
+        - if: steps.repo.outputs.ref-exists == 'false'
+          uses: actions/checkout@v3
+          with:
+              fetch-depth: ${{ inputs.fetch-depth }}
+              path: ${{ inputs.path }}
+              repository: ${{ inputs.repository }}
+              ref: ${{ inputs.alternate_ref }}
+              token: ${{ inputs.token }}
