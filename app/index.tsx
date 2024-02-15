@@ -183,6 +183,7 @@ const App = () => {
         connectionManager.on(ConnectionManager.EVENT_CONNECTION_REOPEN, () => setIsConnectionOpened(true));
         const networkMonitor = NetworkMonitor.getInstance();
         networkMonitor.init(requestAPI, handleNetworkStatus);
+        console.log('TESTING THE TEST LINK FROM SMARTCHARTS');
     }, []);
     /*
     shouldComponentUpdate(nextProps, nextState) {
