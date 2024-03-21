@@ -9,7 +9,7 @@ jobs:
         steps:
             - name: Setup node and npm
               id: step1
-              uses: actions/setup-node@9ced9a43a244f3ac94f13bfd896db8c8f30da67a
+              uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
               with:
                   node-version: '18'
                   check-latest: true
