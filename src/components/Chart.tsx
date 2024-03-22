@@ -104,7 +104,7 @@ const Chart = (props: TChartProps) => {
     if (isMobile && crosshair.state !== 2) {
         setCrosshairState(2);
     }
-
+    console.log('test');
     return (
         <div
             id={id || chartId}
