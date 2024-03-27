@@ -7,12 +7,15 @@ export default class IndicatorPredictionDialogStore {
     mainStore: MainStore;
     menuStore: MenuStore;
     scrollPanel?: HTMLElement;
+    cancelCallback?: () => void;
 
     constructor({ mainStore }: { mainStore: MainStore }) {
         makeObservable(this, {
             dialogPortalNodeId: observable,
             open: computed,
+            cancelCallback: observable,
             setOpen: action.bound,
+            setCancel: action.bound,
             handleCancel: action.bound,
             handleContinue: action.bound,
         });
@@ -33,14 +36,23 @@ export default class IndicatorPredictionDialogStore {
     }
 
     handleCancel() {
+        if (this.cancelCallback) {
+            this.cancelCallback();
+        }
         this.setOpen(false);
+        this.cancelCallback= () => false;
+    }
+
+    setCancel(callback: () => void) {
+        this.cancelCallback = callback;
     }
 
     handleContinue() {
         this.mainStore.timeperiod.setGranularity(0);
         this.mainStore.studies.deletePredictionStudies();
+        this.mainStore.studies.cleanupPredictionIndicator();
         setTimeout(() => {
-            this.handleCancel();
+            this.setOpen(false);
         }, 100);
     }
 }

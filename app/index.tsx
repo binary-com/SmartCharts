@@ -256,9 +256,11 @@ const App = () => {
             });
         }
     };
+    const ref = React.useRef(null);
 
     return (
         <SmartChart
+            ref={ref}
             id={chartId}
             chartStatusListener={(isChartReady: boolean) => getIsChartReady(isChartReady)}
             stateChangeListener={handleStateChange}

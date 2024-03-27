@@ -7,7 +7,14 @@ import { TActiveItem, TIndicatorConfig, TSettingsParameter } from 'src/types';
 import MainStore from '.';
 import { IndicatorCatTrendDarkIcon, IndicatorCatTrendLightIcon } from '../components/Icons';
 import { getIndicatorsTree, getDefaultIndicatorConfig, STATE } from '../Constant';
-import { clone, flatMap, isLiteralObject, prepareIndicatorName, transformStudiesforTheme } from '../utils';
+import {
+    clone,
+    flatMap,
+    isLiteralObject,
+    prepareIndicatorName,
+    saveToLocalStorage,
+    transformStudiesforTheme,
+} from '../utils';
 import { LogActions, LogCategories, logEvent } from '../utils/ga';
 import MenuStore from './MenuStore';
 import SettingsDialogStore from './SettingsDialogStore';
@@ -217,6 +224,7 @@ export default class StudyLegendStore {
         this.activeItems = activeItems;
 
         this.mainStore.bottomWidgetsContainer.updateChartHeight();
+        this.cleanupPredictionIndicator();
     }
 
     updateTheme() {
@@ -326,14 +334,27 @@ export default class StudyLegendStore {
     };
 
     deletePredictionStudies() {
-        let filteredItem = this.activeItems.filter(item => item.isPrediction == true);
-        filteredItem.forEach(item => {
-            this.mainStore.state.stateChange(STATE.INDICATOR_DELETED);
-            this.deleteStudyById(item.id);
-        });
-        this.mainStore.state.saveLayout();
+        const filteredItem = this.activeItems.filter(item => item.isPrediction);
+        if (filteredItem.length > 0) {
+            filteredItem.forEach(item => {
+                this.mainStore.state.stateChange(STATE.INDICATOR_DELETED);
+                this.deleteStudyById(item.id);
+            });
+            this.mainStore.state.saveLayout();
+        }
+    }
+    savePredictionStudies() {
+        const filteredItem = this.activeItems.filter(item => item.isPrediction);
+        if (filteredItem.length > 0) {
+            saveToLocalStorage('predictionIndicators', filteredItem);
+        }
     }
 
+    cleanupPredictionIndicator() {
+        if (localStorage.getItem('predictionIndicators')) {
+            localStorage.removeItem('predictionIndicators');
+        }
+    }
     deleteAllStudies() {
         this.activeItems = [];
         window.flutterChart?.indicators.clearIndicators();

@@ -181,6 +181,7 @@ export type TBarrierUpdateProps = {
 };
 
 export type TChartProps = {
+    ref: React.RefObject<{ hasPredictionIndicators(): void; triggerPopup(arg: () => void): void }>;
     requestAPI: BinaryAPI['requestAPI'];
     requestSubscribe: BinaryAPI['requestSubscribe'];
     requestForget: BinaryAPI['requestForget'];

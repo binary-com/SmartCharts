@@ -1,9 +1,10 @@
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
-import React from 'react';
+import React, { useImperativeHandle } from 'react';
 import 'react-tabs/style/react-tabs.css';
 import { useStores } from 'src/store';
 import { TChartProps } from 'src/types';
+import { safeParse } from 'src/utils';
 import { usePrevious } from '../hooks';
 
 /* css + scss */
@@ -25,11 +26,22 @@ import RenderInsideChart from './RenderInsideChart';
 import SettingsDialog from './SettingsDialog';
 import ScrollToRecent from './ScrollToRecent';
 
-const Chart = (props: TChartProps) => {
-    const { chart, drawTools, studies, chartSetting, chartType, state, loader, chartAdapter, crosshair } = useStores();
+const Chart = React.forwardRef((props: TChartProps, ref) => {
+    const {
+        chart,
+        drawTools,
+        studies,
+        chartSetting,
+        chartType,
+        state,
+        loader,
+        chartAdapter,
+        crosshair,
+        timeperiod,
+    } = useStores();
     const { chartId, init, destroy, isChartAvailable, chartContainerHeight, containerWidth } = chart;
     const { setCrosshairState } = crosshair;
-    const { settingsDialog: studiesSettingsDialog } = studies;
+    const { settingsDialog: studiesSettingsDialog, restoreStudies, activeItems } = studies;
     const { settingsDialog: drawToolsSettingsDialog } = drawTools;
     const { settingsDialog: chartTypeSettingsDialog, isCandle, isSpline } = chartType;
     const { updateProps, isChartClosed } = state;
@@ -38,6 +50,22 @@ const Chart = (props: TChartProps) => {
 
     const rootRef = React.useRef<HTMLDivElement>(null);
     const chartContainerRef = React.useRef<HTMLDivElement>(null);
+
+    useImperativeHandle(ref, () => {
+        return {
+            hasPredictionIndicators() {
+                return localStorage.getItem('predictionIndicators') !== null;
+            },
+            triggerPopup(cancelCallback: () => void) {
+                timeperiod.predictionIndicator.dialogPortalNodeId = 'modal_root';
+                timeperiod.predictionIndicator.setOpen(true);
+                timeperiod.predictionIndicator.setCancel(() => {
+                    cancelCallback();
+                    restoreStudies([...activeItems, ...safeParse(localStorage.getItem('predictionIndicators') || '')]);
+                });
+            },
+        };
+    });
 
     React.useEffect(() => {
         initGA();
@@ -193,6 +221,6 @@ const Chart = (props: TChartProps) => {
             </div>
         </div>
     );
-};
+});
 
 export default observer(Chart);

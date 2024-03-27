@@ -3,7 +3,7 @@ import { useStores, getContext, initContext } from 'src/store';
 import { TChartProps } from 'src/types';
 import Chart from './Chart';
 
-const SmartChart = ({ children, ...props }: TChartProps) => {
+const SmartChart = React.forwardRef(({ children, ...props }: TChartProps, ref) => {
     const is_context_intialized = React.useRef(false);
     if (!is_context_intialized.current) {
         initContext();
@@ -17,9 +17,11 @@ const SmartChart = ({ children, ...props }: TChartProps) => {
 
     return (
         <Provider value={store}>
-            <Chart {...props}>{children}</Chart>
+            <Chart {...props} ref={ref}>
+                {children}
+            </Chart>
         </Provider>
     );
-};
+});
 
 export default SmartChart;
