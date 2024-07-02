@@ -12,6 +12,7 @@ const languages = [
     'de',
     'hu',
     'it',
+    'km',
     'ko',
     'mn',
     'pt',

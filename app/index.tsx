@@ -100,6 +100,7 @@ const activeLanguages = [
     'FR',
     'ID',
     'IT',
+    'KM',
     'KO',
     'MN',
     'PL',

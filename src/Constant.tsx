@@ -2080,6 +2080,11 @@ export const Languages = [
         icon: <FlagIcons.Italy />,
     },
     {
+        key: 'km',
+        name: 'ខ្មែរ',
+        icon: <FlagIcons.Cambodia />,
+    },
+    {
         key: 'ko',
         name: '한국어',
         icon: <FlagIcons.Korean />,
